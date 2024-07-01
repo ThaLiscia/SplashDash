@@ -1,0 +1,230 @@
+import time, random, pygame
+import os
+
+#Initialize Pygame
+pygame.init()
+
+#Dimensions for the screen
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT =  600
+FISH_WIDTH = 30
+FISH_HEIGHT = 30
+OBJECT_WIDTH = 10
+OBJECT_HEIGHT = 10
+FISH_SPEED = 5
+OBJECT_SPEED = 2 #Starting speed
+MINE_SPEED = 3   #Starting speed
+BUBBLE_SIZE = 10
+
+#Colors
+GREEN = (144, 238, 144)
+OCEAN_BLUE = (28, 107, 160)
+YELLOW = (204, 204, 0)
+BLACK = (0, 0, 0)
+PURPLE = (128, 0, 128)
+BLUE = (28, 107, 160)
+ORANGE = (255, 165, 0)
+BROWN = (181, 101, 29)
+WHITE = (255, 255, 255)
+
+
+os.chdir(r'C:\Users\ThaLiscia\PersonalProjects\SplashDash')
+
+#Load images
+fish_image = pygame.image.load('fish.png')
+background_image = pygame.image.load('background.png')
+mine_image = pygame.image.load('mine.png')
+bubble_image = pygame.image.load('bubble.png')
+
+#Scaling images
+fish_image = pygame.transform.scale(fish_image, (30, 30))
+background_image = pygame.transform.scale(background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+mine_image = pygame.transform.scale(mine_image, (OBJECT_WIDTH * 2, OBJECT_HEIGHT * 2))#Change size of mine
+bubble_image = pygame.transform.scale(bubble_image, (BUBBLE_SIZE, BUBBLE_SIZE))
+
+#Setup screen
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption('Splash Dash')
+
+#Fish settings
+fish_x = SCREEN_WIDTH // 2
+fish_y = SCREEN_HEIGHT - FISH_HEIGHT - 40
+fish_rect = fish_image.get_rect(topleft = (fish_x, fish_y)) #added for images
+
+#Variables for the game
+objects = []
+mine_objects = []
+bubbles = []
+score = 0
+difficulty = 1
+gameover = False
+
+#Font style and size
+font = pygame.font.SysFont('Times New Roman', 20, bold = True)
+large_font = pygame.font.SysFont('Times New Roman', 40, bold = True) 
+medium_font = pygame.font.SysFont('Times New Roman', 30, bold = True)
+
+def draw_food(surface, x, y): 
+    pygame.draw.circle(surface, BROWN, (x,y), OBJECT_WIDTH // 2)
+
+def draw_bubbles(surface): #Added for bubbles
+    for bubble in bubbles:
+        surface.blit(bubble_image, bubble)
+
+
+def reset_game():
+    global fish_rect, objects, mine_objects, bubbles, score, difficulty, gameover
+    fish_rect.topleft = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - FISH_HEIGHT - 40)
+    objects = []
+    mine_objects = []
+    bubbles = []
+    score = 0
+    difficulty = 1
+    gameover = False
+
+'''def show_start_screen():
+    screen.blit(background_image, (0,0))
+    title_text = large_font.render('Splash Dash', True, PURPLE)
+    instruction_text = font.render('Press any key to start', True, PURPLE)
+    instructions = [
+        "Use arrow keys to move the fish.",
+        "Avoid the mines.",
+        "Collect food to increase your score."
+    ]
+    screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, SCREEN_HEIGHT // 3))
+    screen.blit(instruction_text, (SCREEN_WIDTH // 2 - instruction_text.get_width() // 2, SCREEN_HEIGHT // 2))
+
+    for i, line in enumerate(instructions):
+        instruction_line = font.render(line, True, WHITE)
+        screen.blit(instruction_line, (SCREEN_WIDTH // 2 - instruction_line.get_width() // 2, SCREEN_HEIGHT // 2 + 40 + i * 30))
+
+    pygame.display.flip()
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                waiting = False
+'''
+#Game loop
+running = True
+while running:
+    #show_start_screen()
+    #while not gameover:
+    screen.blit(background_image, (0,0))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    #Controls
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and fish_rect.left > 0:
+        fish_rect.x -= FISH_SPEED
+        if random.randint(1, 20) == 1:
+            bubbles.append(pygame.Rect(fish_rect.x + 15, fish_rect.y, BUBBLE_SIZE, BUBBLE_SIZE))
+    if keys[pygame.K_RIGHT] and fish_rect.right < SCREEN_WIDTH:
+        fish_rect.x += FISH_SPEED
+        if random.randint(1, 20) == 1:
+            bubbles.append(pygame.Rect(fish_rect.x + 15, fish_rect.y, BUBBLE_SIZE, BUBBLE_SIZE))
+    if keys[pygame.K_UP] and fish_rect.top > 0:
+        fish_rect.y -= FISH_SPEED
+        if random.randint(1, 20) == 1:
+            bubbles.append(pygame.Rect(fish_rect.x + 15, fish_rect.y, BUBBLE_SIZE, BUBBLE_SIZE))
+    if keys[pygame.K_DOWN] and fish_rect.bottom < SCREEN_HEIGHT:
+        fish_rect.y += FISH_SPEED
+        if random.randint(1, 20) == 1:
+            bubbles.append(pygame.Rect(fish_rect.x + 15, fish_rect.y, BUBBLE_SIZE, BUBBLE_SIZE))
+        
+
+    #Object spawning
+    if random.randint(1, max(10 - difficulty, 1)) == 1:
+        obj_x = random.randint(0, SCREEN_WIDTH - OBJECT_WIDTH)
+        obj = pygame.Rect(obj_x, 0, OBJECT_WIDTH, OBJECT_HEIGHT)
+        objects.append(obj)
+
+    #Harmful Objects spawning
+    if random.randint(1, max(20 - difficulty * 2, 1)) == 1:
+        mine_x = random.randint(0, SCREEN_WIDTH - OBJECT_WIDTH)
+        mine = pygame.Rect(mine_x, 0, OBJECT_WIDTH, OBJECT_HEIGHT)
+        mine_objects.append(mine)
+        
+
+    #Move objects and check for collision
+    for obj in objects[:]:
+        obj.y += OBJECT_SPEED
+        if obj.colliderect(fish_rect):
+            score += 10
+            objects.remove(obj)
+        elif obj.y > SCREEN_HEIGHT:
+            objects.remove(obj)    
+            
+    #Move harmful objects and check for collision
+    for mine in mine_objects[:]:
+            mine.y += OBJECT_SPEED
+            if mine.colliderect(fish_rect):        
+                gameover = True #Touch mine game ends
+                break
+            elif mine.y > SCREEN_HEIGHT:
+                mine_objects.remove(mine)
+
+    #Move Bubbles Added
+    for bubble in bubbles[:]:
+        bubble.y -= 2
+        if bubble.y < 0:
+            bubbles.remove(bubble)
+
+    #Drawing fish and objects
+    screen.blit(fish_image, fish_rect)
+    draw_bubbles(screen) #bubbles
+    for obj in objects: #Objects
+        draw_food(screen, obj.x, obj.y)
+    for mine in mine_objects:
+        screen.blit(mine_image, mine)
+
+    #Update the score and difficulty
+    if not gameover and score // 100 > difficulty - 1:
+        difficulty += 1
+        OBJECT_SPEED += 0.01 #Gradual increase in speed
+        MINE_SPEED += 0.01   #Gradual increase in speed
+
+    #Display the score and difficulty
+    score_text = font.render(f'Score: {score}', True, OCEAN_BLUE)
+    difficulty_text = font.render(f'Difficulty: {difficulty}', True, OCEAN_BLUE)
+    screen.blit(score_text, (10,10))
+    screen.blit(difficulty_text, (10,40))
+
+    pygame.display.flip()
+    pygame.time.delay(30)
+
+    #Game Over
+    if gameover:
+        screen.blit(background_image,(0,0))
+        gameover_text = large_font.render('Game Over!', True, PURPLE)
+        final_score_text = medium_font.render(f'Final Score: {score}', True, OCEAN_BLUE)
+        retry_text = font.render('Press R to Try Again or Q to Quit', True, WHITE)
+
+        screen.blit(gameover_text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 30))
+        screen.blit(final_score_text, (SCREEN_WIDTH // 2 - 140, SCREEN_HEIGHT // 2 - 70))
+        screen.blit(retry_text, (SCREEN_WIDTH // 2 - 180, SCREEN_HEIGHT // 2 + 20))
+        pygame.display.flip()
+        
+        waiting_for_retry = True
+        while waiting_for_retry:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    waiting_for_retry = False
+                keys = pygame.key.get_pressed()
+                if keys[pygame.K_r]:
+                    waiting_for_retry = False
+                    reset_game()
+                if keys[pygame.K_q]:
+                    running = False
+                    waiting_for_retry = False
+
+
+
+pygame.quit()
